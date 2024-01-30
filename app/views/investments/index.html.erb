@@ -1,0 +1,38 @@
+<p style="color: green"><%= notice %></p>
+
+<h1>Investments</h1>
+
+<h2>Cálculo de balance</h2>
+<br>
+
+<form>
+  <label for="quantity"><b>Cantidad a calcular: </b>USD $</label>
+  <input type="text" id="quantity" name="quantity">
+  <button>Calcular</button>
+</form>
+
+<br>
+<table>
+  <thead>
+    <tr>
+      <th class="cell">Balance Inicial</th>
+      <th class="cell">Moneda</th>
+      <th class="cell">Retorno Mensual</th>
+      <th style="width: 5%;"></th>
+      <th class="cell">Balance Proyectado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @cryptocoin_info.each do |info| %>
+      <tr>
+        <td class="cell"><%= info[:initial_balance] %></td>
+        <td class="cell"><%= info[:name] %></td>
+        <td class="cell"><%= "#{info[:monthly_return]} %" %></td>
+        <td style="width: 5%;"></td>
+        <td class="cell"><%= info[:annual_balance].round(2) if info[:annual_balance] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+
