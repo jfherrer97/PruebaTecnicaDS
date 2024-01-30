@@ -1,5 +1,8 @@
 Rails.application.routes.draw do
-  resources :investments
+  resources :investments do
+    get 'csv_export', on: :collection
+    get 'json_export', on: :collection
+  end
   resources :cryptocoins
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 

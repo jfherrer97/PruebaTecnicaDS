@@ -5,30 +5,61 @@ class InvestmentsController < ApplicationController
 
   before_action :set_investment, only: %i[ show edit update destroy ]
 
-  base_uri "https://rest.coinapi.io/v1/"
+  base_uri 'https://rest.coinapi.io/v1'
 
-  def get_cryptocoin_info
+
+  def getCoinSymbol(coin)
+    if coin == "Bitcoin"
+      return "BTC"
+    elsif coin == "Ether"
+      return "ETH"
+    elsif coin == "Cardano"
+      return "ADA"
+    else
+      return "Other"
+    end
+  end
+
+
+  def get_cryptocoin_info()
     table_info = CSV.parse(File.read("app/assets/files/origen.csv"), headers: true)
     cryptocoin_info = []
-    for i in 0..table_info.length - 1
-      cryptocoin_info << { name: table_info[i]["Moneda"], monthly_return: table_info[i]["Interes_mensual"], initial_balance: table_info[i]["balance_ini"], annual_balance: 5}
+  
+    table_info.each do |row|
+      monthly_return = row["Interes_mensual"].to_f / 100.0
+      initial_balance = row["balance_ini"].to_f
+      annual_balance = calculate_annual_return(monthly_return, initial_balance)
+  
+      cryptocoin_info << {
+        name: row["Moneda"],
+        coin_symbol: getCoinSymbol(row["Moneda"]),
+        monthly_return: row["Interes_mensual"],
+        initial_balance: initial_balance,
+        annual_balance: annual_balance.round(2),
+        price_usd: get_coin_price(row["Moneda"])
+      }
     end
+
     cryptocoin_info
   end
 
-  def get_coin_api_information
+
+  def get_coin_price(coin)
     access_token = Rails.application.credentials.dig(:coin_api_access_token)
     headers = {
-    'X-CoinAPI-Key' => access_token
+      'X-CoinAPI-Key' => access_token
     }
-    response = self.class.get('/assets', headers: headers)
+    coin_symbol = getCoinSymbol(coin)
+    response = self.class.get("/exchangerate/#{coin_symbol}/USD", headers: headers)
     
     if response.success?
-        render json: response.parsed_response
+      price_data = JSON.parse(response.body)
+      return price_data["rate"]
     else
-        render json: { error: 'Error when getting info from CoinAPI' }, status: :unprocessable_entity
+      return nil
     end
   end
+
 
   def calculate_annual_return(monthly_return, initial_balance)
     annual_return = initial_balance
@@ -38,9 +69,35 @@ class InvestmentsController < ApplicationController
     annual_return
   end
 
+
+  def csv_export
+    @cryptocoin_info = get_cryptocoin_info
+    data = @cryptocoin_info.map { |info| [info["name"], info["initial_balance"], info["monthly_return"], info["annual_balance"], info["price_usd"] ] }
+  
+    csv_data = CSV.generate(headers: true) do |csv|
+      csv << ["Moneda", "Balance Inicial", "Retorno Mensual", "Balance Anual Proyectado", "Balance Anual Proyectado en USD"]
+      data.each { |row| csv << row }
+    end
+
+    respond_to do |format|
+      format.csv { send_data csv_data, filename: "investments.csv" }
+    end
+  
+  end
+  
+
+  def json_export
+    @cryptocoin_info = get_cryptocoin_info
+    json_data = @cryptocoin_info.to_json
+
+    respond_to do |format|
+      format.json { send_data json_data, filename: "investments.json" }
+    end
+  end
+  
+
   # GET /investments or /investments.json
   def index
-    # @investments = Investment.all
     @cryptocoin_info = get_cryptocoin_info
   end
 
