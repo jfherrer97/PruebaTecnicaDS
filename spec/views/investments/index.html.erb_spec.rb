@@ -1,23 +1,27 @@
 require 'rails_helper'
 
-RSpec.describe "investments/index", type: :view do
-  before(:each) do
-    assign(:investments, [
-      Investment.create!(
-        price: 2.5,
-        cryptocoins: nil
-      ),
-      Investment.create!(
-        price: 2.5,
-        cryptocoins: nil
-      )
-    ])
+RSpec.feature "Investments View", type: :feature do
+  scenario "User should see investment information and updates automatically" do
+    # Go to investments index page
+    visit investments_path
+
+    # Show investment information
+    expect(page).to have_content("Calculadora de Inversiones")
+    expect(page).to have_selector("table tbody tr", count: 3) # Verificar que hay 3 filas en la tabla
+
+    # Show annual_balance_usd value
+    expect(page).to have_selector("#annual_balance_usd_cell")
   end
 
-  it "renders a list of investments" do
-    render
-    cell_selector = Rails::VERSION::STRING >= '7' ? 'div>p' : 'tr>td'
-    assert_select cell_selector, text: Regexp.new(2.5.to_s), count: 2
-    assert_select cell_selector, text: Regexp.new(nil.to_s), count: 2
+  scenario "User should export investment information to CSV" do
+    # Go to investments index page
+    visit investments_path
+
+    # Click CSV button
+    click_button "Exportar a CSV"
+
+    # CSV file download
+    expect(page.response_headers['Content-Type']).to eq('text/csv')
+    expect(page.response_headers['Content-Disposition']).to include('attachment')
   end
 end

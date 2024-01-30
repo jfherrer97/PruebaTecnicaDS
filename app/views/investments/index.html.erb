@@ -1,38 +1,69 @@
-<p style="color: green"><%= notice %></p>
+<p class="notice"><%= notice %></p>
 
 <h1>Calculadora de Inversiones</h1>
+<span class="last-update-time"></span>
 <br>
 
-<table>
-  <thead>
-    <tr>
-      <th class="cell">Moneda</th>
-      <th class="cell">Balance Inicial</th>
-      <th class="cell">Retorno Mensual</th>
-      <th class="cell">Balance Anual Proyectado</th>
-      <th class="cell">Balance Anual Proyectado en USD</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @cryptocoin_info.each do |info| %>
+<br>
+<div class="table-container">
+  <table>
+    <thead>
       <tr>
-        <td class="cell" style="text-align: left !important;">
-          <div>
-            <%= image_tag "coins/#{info[:name].downcase}.png", class: "coin-image" %>
-            <%= "#{info[:name]}" %>
-          </div>
-        </td>
-        <td class="cell"><%= "#{info[:coin_symbol]} #{info[:initial_balance]}" %></td>
-        <td class="cell"><%= "#{info[:monthly_return]} %" %></td>
-        <td class="cell"><%= "#{info[:coin_symbol]} #{info[:annual_balance].round(2) if info[:annual_balance]}" %></td>
-        <td class="cell"><%= info[:price_usd].present? ? "USD #{(info[:annual_balance] * info[:price_usd]).round(2)}" : "No se pudo obtener el valor" %></td>
+        <th>Moneda</th>
+        <th>Balance Inicial</th>
+        <th>Retorno Mensual</th>
+        <th>Balance Anual Proyectado</th>
+        <th>Balance Anual Proyectado en USD</th>
       </tr>
-    <% end %>
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      <% @cryptocoin_info.each do |info| %>
+        <tr>
+          <td class="coin-cell">
+            <%= image_tag "coins/#{info[:name].downcase}.png", class: "coin-image" %>
+            <%= info[:name] %>
+          </td>
+          <td><%= info[:initial_balance] %></td>
+          <td><%= info[:monthly_return] %></td>
+          <td><%= info[:annual_balance] %></td>
+          <td id="annual_balance_usd_cell"><%= info[:annual_balance_usd] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
 
-<br>
-<div class="btn-style">
+<div class="button-container">
   <%= button_to "Exportar a CSV", csv_export_investments_path(format: :csv), method: :get, class: "btn btn-primary" %>
   <%= button_to "Exportar a JSON", json_export_investments_path(format: :json), method: :get, class: "btn btn-primary" %>
 </div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(document).ready(function() {
+    function updateAnnualBalanceValue() {
+      $.ajax({
+        url: '/update_annual_balance_usd_value',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+          $('#annual_balance_usd_cell').text(response.annual_balance_usd);
+          $('.last-update-time').text('Última actualización: ' + getCurrentTime());
+        },
+        error: function(error) {
+          console.error('Error al obtener el valor del balance en USD:', error);
+        }
+      });
+    }
+    function getCurrentTime() {
+      var now = new Date();
+      var hour = now.getHours();
+      var minutes = now.getMinutes();
+      var seconds = now.getSeconds();
+      return hour + ':' + minutes + ':' + seconds;
+    }
+    updateAnnualBalanceValue();
+    setInterval(updateAnnualBalanceValue, 3000);
+  });
+</script>

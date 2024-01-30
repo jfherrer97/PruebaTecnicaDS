@@ -29,14 +29,15 @@ class InvestmentsController < ApplicationController
       monthly_return = row["Interes_mensual"].to_f / 100.0
       initial_balance = row["balance_ini"].to_f
       annual_balance = calculate_annual_return(monthly_return, initial_balance)
+      price_usd = get_coin_price(row["Moneda"])
+      annual_balance_usd = price_usd.present? ? "USD #{(annual_balance * price_usd).round(2)}" : "No se pudo obtener el valor"
   
       cryptocoin_info << {
         name: row["Moneda"],
-        coin_symbol: getCoinSymbol(row["Moneda"]),
-        monthly_return: row["Interes_mensual"],
-        initial_balance: initial_balance,
-        annual_balance: annual_balance.round(2),
-        price_usd: get_coin_price(row["Moneda"])
+        initial_balance: "#{getCoinSymbol(row["Moneda"])} #{initial_balance}",
+        monthly_return: "#{row["Interes_mensual"]} %",
+        annual_balance: "#{getCoinSymbol(row["Moneda"])} #{annual_balance.round(2) if annual_balance}",
+        annual_balance_usd: annual_balance_usd,
       }
     end
 
@@ -70,18 +71,38 @@ class InvestmentsController < ApplicationController
   end
 
 
+  def update_annual_balance_usd_value   
+    @cryptocoin_info = get_cryptocoin_info
+    annual_balance_usd = ""
+    @cryptocoin_info.each do |row|
+      annual_balance_usd = row[:annual_balance_usd]
+    end
+       
+    respond_to do |format|
+      format.json { render json: { annual_balance_usd: annual_balance_usd } }
+    end
+  end
+  
+
+
   def csv_export
     @cryptocoin_info = get_cryptocoin_info
-    data = @cryptocoin_info.map { |info| [info["name"], info["initial_balance"], info["monthly_return"], info["annual_balance"], info["price_usd"] ] }
+    data = @cryptocoin_info.map do |info|
+      [
+        info[:name] || "", 
+        info[:initial_balance] || "", 
+        info[:monthly_return] || "", 
+        info[:annual_balance] || "", 
+        info[:annual_balance_usd] || ""
+      ]
+    end
   
     csv_data = CSV.generate(headers: true) do |csv|
       csv << ["Moneda", "Balance Inicial", "Retorno Mensual", "Balance Anual Proyectado", "Balance Anual Proyectado en USD"]
       data.each { |row| csv << row }
     end
-
-    respond_to do |format|
-      format.csv { send_data csv_data, filename: "investments.csv" }
-    end
+  
+    send_data csv_data, filename: "investments.csv"
   
   end
   
